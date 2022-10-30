@@ -153,7 +153,7 @@ public class KeyedHashGenerator {
 //        return;
 //    }
 
-    public static  String keyedHash(String mac,String serial, long time, String AESkey) throws UnsupportedEncodingException {
+    public   String keyedHash(String mac,String serial, String time, String AESkey) throws UnsupportedEncodingException {
         String leftMost = mac+time;
         String rightMost = serial+time;
         byte[] LH = computeMD5(leftMost.getBytes(StandardCharsets.UTF_8));
@@ -177,13 +177,13 @@ public class KeyedHashGenerator {
         return DH3str;
     }
 
-    public static void main(String[] args) throws UnsupportedEncodingException {
-        String mac = "E446B00F80D7";
-        String serial = "erjycrsd1343n";
-        long time = System.currentTimeMillis();
-        String key  = "urefbsdbfweufwet"; //一个英文字符占一个字节，必须有16个字节
-
-        String output = keyedHash(mac,serial,time,key);
-        System.out.println(output);
-    }
+//    public static void main(String[] args) throws UnsupportedEncodingException {
+//        String mac = "E446B00F80D7";
+//        String serial = "erjycrsd1343n";
+//        long time = System.currentTimeMillis();
+//        String key  = "urefbsdbfweufwet"; //一个英文字符占一个字节，必须有16个字节
+//
+//        String output = keyedHash(mac,serial,time,key);
+//        System.out.println(output);
+//    }
 }
