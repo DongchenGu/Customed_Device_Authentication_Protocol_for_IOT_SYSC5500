@@ -57,6 +57,9 @@ public class Client {
                 StringBuilder builder = new StringBuilder();
                 while ((len=bufferedReader.read(chars)) != -1) {
                     builder.append(new String(chars, 0, len));
+                    if(builder.toString().endsWith("END")){
+                        break;
+                    }
                 }
                 String receive = builder.toString();
                 //获得到TD回复中的tag标签
@@ -67,20 +70,22 @@ public class Client {
                 if(tag.equals("ACK_mac&serial_timeProvided")){
                     //要接受从TD传过来的time值
                     time = authenticationFromTD.getString("time");
+                    System.out.println("客户端已经或得到time值"+time);
                     if(time!=null){
                         //重新计算KeyedHash
                         keyedHash = new KeyedHashGenerator().keyedHash(mac,serial,time,key);
-                        //然后需要将结果发给TD
+                        //然后需要将计算出的keyedHash结果发给TD
                         JSONObject JSON_DH3_Back=new JSONObject();
                         JSON_DH3_Back.put("tag", "DH3");
                         JSON_DH3_Back.put("DH3", keyedHash);
                         //将JSON发给TD
-                        bufferedWriter.write(JSON_DH3_Back.toString());
+                        bufferedWriter.write(JSON_DH3_Back.toString()+"END");
+                        bufferedWriter.flush();
                     }else{
                         System.out.println("ClientNode: error! not a valid timestamp");
                         JSONObject ERR=new JSONObject();
                         ERR.put("tag", "ERR_finished");
-                        bufferedWriter.write(ERR.toString());
+                        bufferedWriter.write(ERR.toString()+"END");
                         bufferedWriter.flush();
                         bufferedWriter.close();
                         bufferedReader.close();

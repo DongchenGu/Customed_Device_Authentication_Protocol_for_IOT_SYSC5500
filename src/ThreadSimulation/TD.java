@@ -59,16 +59,18 @@ public class TD {
                     String receive = builder.toString();
                     //将收到的字符串中的结束符号去掉，
                     receive = receive.substring(0,receive.length() - 3);
-                    System.out.println(receive);
+                    //System.out.println(receive);
                     //获得到认证请求中的tag标签
                     JSONObject FromClient = new JSONObject(receive);
                     String tag =FromClient.getString("tag");
+                    //System.out.println(tag);
 
                     //分情况讨论，如果收到的是不是结束就继续进行认证过程
                     if(tag.equals("Request_AuthenticationStart")){
                         //要接受从客户端发过来的Mac和serial的值
                         mac = FromClient.getString("mac");
                         serial = FromClient.getString("serial");
+
                         //生成时间戳,并转换成字符串
                         long currentTime = System.currentTimeMillis();
                         time = Long.toString(currentTime);
@@ -80,8 +82,9 @@ public class TD {
                         JSONObject JSON_time=new JSONObject();
                         JSON_time.put("tag", "ACK_mac&serial_timeProvided");
                         JSON_time.put("time", time);
-                        //将JSON发给TD
-                        bufferedWriter.write(JSON_time.toString());
+                        //将JSON发给client
+                        bufferedWriter.write(JSON_time.toString()+"END");
+                        bufferedWriter.flush();
 
                     }else if(tag.equals("ERR_finished")){
                         System.out.println("TDH: Err! Request for the authentication is stopped");
@@ -97,7 +100,7 @@ public class TD {
                             System.out.println("TDH:authentication pass!");
                             JSONObject JSON_result=new JSONObject();
                             JSON_result.put("tag", "ACK_OK");
-                            bufferedWriter.write(JSON_result.toString());
+                            bufferedWriter.write(JSON_result.toString()+"END");
                             bufferedWriter.flush();
                             bufferedWriter.close();
                             bufferedReader.close();
@@ -106,7 +109,7 @@ public class TD {
                             //两者值不相等，认证失败ACK_NOT_MATCH
                             JSONObject JSON_result=new JSONObject();
                             JSON_result.put("tag", "ACK_NOT_MATCH");
-                            bufferedWriter.write(JSON_result.toString());
+                            bufferedWriter.write(JSON_result.toString()+"END");
                             bufferedWriter.flush();
                             bufferedWriter.close();
                             bufferedReader.close();
