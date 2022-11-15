@@ -1,13 +1,14 @@
 package ThreadSimulation;
 
 import Decoder.BASE64Decoder;
-import org.apache.commons.codec.binary.Base64;
+import com.sun.tools.jconsole.JConsoleContext;
 
 import java.io.*;
 import java.net.Socket;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import  org.json.*;
@@ -25,34 +26,32 @@ import java.security.spec.*;
 
 //client最先发起认证请求，TD用来验证
 public class Client {
+    public static java.util.Base64.Decoder decoder = java.util.Base64.getDecoder();
+    public static java.util.Base64.Encoder encoder = Base64.getEncoder();
 
     //将秘钥进行base64编码，然后再通过JSON传输
     public static String GetPublicKeyStr(ECPublicKey key){
-        String KeyStr = new String(Base64.encodeBase64(key.getEncoded()));
+        String KeyStr = new String(encoder.encodeToString(key.getEncoded()));
         return KeyStr;
     }
     public static String GetPrivateKeyStr(ECPrivateKey key){
-        String KeyStr = new String(Base64.encodeBase64(key.getEncoded()));
+        String KeyStr = new String(encoder.encodeToString(key.getEncoded()));
         return KeyStr;
     }
     //decode base64，拿到原来的类型
-    public  static PublicKey strToPublicKey(String str){
+    public  static PublicKey strToPublicKey(String str) throws InvalidKeySpecException {
         PublicKey publicKey = null;
         try {
-
             X509EncodedKeySpec bobPubKeySpec = new X509EncodedKeySpec(
-                    new BASE64Decoder().decodeBuffer(str));
+                    decoder.decode(str));
             KeyFactory keyFactory = KeyFactory.getInstance("EC");
             publicKey = keyFactory.generatePublic(bobPubKeySpec);
-        } catch (InvalidKeySpecException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (NoSuchAlgorithmException  e) {
             e.printStackTrace();
         }
         return publicKey;
     }
+
     public static PrivateKey strToPrivateKey(String str){
         PrivateKey privateKey = null;
         try {
@@ -81,6 +80,7 @@ public class Client {
         ECPrivateKey MyPriKey = null;
         //用来接收对方传来的公钥
         ECPublicKey OtherPubKey = null;
+        ECCencrypt ECCModule = new ECCencrypt();
 
         try {
             //先生成自己的秘钥对
@@ -110,13 +110,15 @@ public class Client {
             Map<String,String> KeyRequest = new HashMap<>();
             JSONObject JSONKeyRequest=new JSONObject();
             JSONKeyRequest.put("tag", "Request_KeyExchange");
+            System.out.println("客户端的公钥");
+            System.out.println(MyPubKey.toString());
             //把公钥转换成str发送出去
             String publicKeyStr = GetPublicKeyStr(MyPubKey);
             JSONKeyRequest.put("publicKey",publicKeyStr);
             //将JSON发给TD,手动加入结束符号，提供判断
             bufferedWriter.write(JSONKeyRequest.toString()+"END");
             bufferedWriter.flush();
-
+            System.out.println("client发送秘钥交换请求");
 
 
             //循环接收内容
@@ -134,9 +136,28 @@ public class Client {
                     }
                 }
                 String receive = builder.toString();
+                //将收到的字符串中的结束符号去掉，
+                receive = receive.substring(0,receive.length() - 3);
+                String plainText = null;
+                JSONObject authenticationFromTD = null;
+
+                //判断string是否是加密后的
+                try{
+                    //不能获取的话说说明就是加密后的
+                    authenticationFromTD = new JSONObject(receive);
+                    System.out.println("message没有加密");
+                }
+                catch (JSONException e) {
+                    //这里需要解密
+                    System.out.println("Client收到加密请求，正在解密message。。。");
+                    plainText = new String(ECCModule.decrypt(receive.getBytes(),MyPriKey));
+                    System.out.println(plainText);
+                    authenticationFromTD = new JSONObject(plainText);
+                }
                 //获得到TD回复中的tag标签
-                JSONObject authenticationFromTD = new JSONObject(receive);
                 String tag =authenticationFromTD.getString("tag");
+
+
 
                 //分情况讨论，如果收到的是不是结束就继续进行认证过程
                 if(tag.equals("ACK_KeyExchange")){
@@ -144,6 +165,7 @@ public class Client {
                         System.out.println("Client已经接收TD返回的publicKey");
                         //将Str转换成PublicKey
                         OtherPubKey =(ECPublicKey)strToPublicKey(TDKeyStr);
+                    //System.out.println(OtherPubKey.toString());
 
                         //秘钥交换流程结束，开始发送认证请求
                         //客户端发起认证，需要将Mac和serial发给服务器端，
@@ -153,16 +175,17 @@ public class Client {
                         JSONrequest.put("mac", mac);
                         JSONrequest.put("serial", serial);
                         //使用TD 的publicKey进行ECC加密
-                        byte[] cipherTxt =new ECCencrypt().encrypt(JSONrequest.toString().getBytes(),OtherPubKey);
+                        byte[] cipherTxt =ECCModule.encrypt(JSONrequest.toString().getBytes(),OtherPubKey);
                         //将JSON发给TD,手动加入结束符号，提供判断
                         bufferedWriter.write(new String(cipherTxt)+"END");
                         bufferedWriter.flush();
-
+                        System.out.println("Client已经发送认证请求");
+                        continue;
                 }
                 if(tag.equals("ACK_mac&serial_timeProvided")){
                     //要接受从TD传过来的time值
                     time = authenticationFromTD.getString("time");
-                    System.out.println("客户端已经或得到time值"+time);
+                    System.out.println("Client已经或得到time值"+time);
                     if(time!=null){
                         //重新计算KeyedHash
                         keyedHash = new KeyedHashGenerator().keyedHash(mac,serial,time,key);
@@ -170,14 +193,20 @@ public class Client {
                         JSONObject JSON_DH3_Back=new JSONObject();
                         JSON_DH3_Back.put("tag", "DH3");
                         JSON_DH3_Back.put("DH3", keyedHash);
+                        //使用TD的publicKey加密
+                        byte[] cipherTxt =ECCModule.encrypt(JSON_DH3_Back.toString().getBytes(),OtherPubKey);
+
                         //将JSON发给TD
-                        bufferedWriter.write(JSON_DH3_Back.toString()+"END");
+                        bufferedWriter.write(new String(cipherTxt)+"END");
                         bufferedWriter.flush();
+                        System.out.println("Client已经发送DH3");
                     }else{
                         System.out.println("ClientNode: error! not a valid timestamp");
                         JSONObject ERR=new JSONObject();
                         ERR.put("tag", "ERR_finished");
-                        bufferedWriter.write(ERR.toString()+"END");
+                        //使用TD的publicKey加密
+                        byte[] cipherTxt =ECCModule.encrypt(ERR.toString().getBytes(),OtherPubKey);
+                        bufferedWriter.write(new String(cipherTxt)+"END");
                         bufferedWriter.flush();
                         bufferedWriter.close();
                         bufferedReader.close();
@@ -189,6 +218,7 @@ public class Client {
                     bufferedReader.close();
                     break;
                 }else if(tag.equals("ACK_OK")){
+                    System.out.println("Client：已经收到反馈");
                     System.out.println("ClientNode: authentication pass!");
                     bufferedWriter.close();
                     bufferedReader.close();

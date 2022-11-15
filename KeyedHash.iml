@@ -20,15 +20,6 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/bcprov-jdk15on-1.59.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library>
-        <CLASSES>
           <root url="jar://$MODULE_DIR$/commons-codec-1.15.jar!/" />
         </CLASSES>
         <JAVADOC />
@@ -38,17 +29,16 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/sun.misc.base64decoder.jar.zip!/" />
+          <root url="jar://$MODULE_DIR$/sun.misc.BASE64Decoder.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
-        <jarDirectory url="jar://$MODULE_DIR$/sun.misc.base64decoder.jar.zip!/" recursive="false" />
       </library>
     </orderEntry>
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/sun.misc.BASE64Decoder.jar!/" />
+          <root url="jar://$MODULE_DIR$/bcprov-jdk15on-1.67.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
