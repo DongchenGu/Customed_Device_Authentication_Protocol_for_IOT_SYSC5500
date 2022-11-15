@@ -1,21 +1,66 @@
 package ThreadSimulation;
 
+import Decoder.BASE64Decoder;
 import KeyedHash.KeyedHashGenerator;
+import ECC2.ECCencrypt;
+import org.apache.commons.codec.binary.Base64;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.security.*;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 
 public class TD {
 
+    //将秘钥进行base64编码，然后再通过JSON传输
+    public static String GetPublicKeyStr(ECPublicKey key){
+        String KeyStr = new String(Base64.encodeBase64(key.getEncoded()));
+        return KeyStr;
+    }
+    public static String GetPrivateKeyStr(ECPrivateKey key){
+        String KeyStr = new String(Base64.encodeBase64(key.getEncoded()));
+        return KeyStr;
+    }
+    //decode base64，拿到原来的类型
+    public  static PublicKey strToPublicKey(String str){
+        PublicKey publicKey = null;
+        try {
 
+            X509EncodedKeySpec bobPubKeySpec = new X509EncodedKeySpec(
+                    new BASE64Decoder().decodeBuffer(str));
+            KeyFactory keyFactory = KeyFactory.getInstance("EC");
+            publicKey = keyFactory.generatePublic(bobPubKeySpec);
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return publicKey;
+    }
+    public static PrivateKey strToPrivateKey(String str){
+        PrivateKey privateKey = null;
+        try {
+            byte[] keyBytes = (new BASE64Decoder()).decodeBuffer(str);
+            PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(keyBytes);
+            KeyFactory keyFactory = KeyFactory.getInstance("EC");
+            privateKey = keyFactory.generatePrivate(pkcs8EncodedKeySpec);
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return privateKey;
+    }
 
     public static void AuthenticateDevice(String key, int port){
             Socket socket = null;
@@ -23,6 +68,21 @@ public class TD {
             String serial;
             String time;
             String keyedHashTDH3=null;
+            ECPublicKey MyPubKey = null;
+            ECPrivateKey MyPriKey = null;
+            //用来接收对方传来的公钥
+            ECPublicKey OtherPubKey = null;
+
+            try {
+                //先生成自己的秘钥对
+                ECCencrypt eCCencrypt = new ECCencrypt();
+                KeyPair keyPair =eCCencrypt.getKeyPair();
+                MyPubKey = (ECPublicKey) keyPair.getPublic();
+                MyPriKey = (ECPrivateKey) keyPair.getPrivate();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
 
             try{
                 ServerSocket server = new ServerSocket(port);
@@ -39,7 +99,7 @@ public class TD {
                 //收到finished表示遇到错误直接断开
                 //作为TD，监听客户端发来的认证请求
                 while (true){
-                    System.out.println("3");
+//                    System.out.println("3");
                     //然后要接收从客户端发过来的相应数据
                     //byte[] bytes = new byte[20];
                     char[] chars = new char[1024];
@@ -66,6 +126,25 @@ public class TD {
                     //System.out.println(tag);
 
                     //分情况讨论，如果收到的是不是结束就继续进行认证过程
+                    //接收到秘钥交换请求
+                    if(tag.equals("Request_KeyExchange")){
+                       String keyStr = FromClient.getString("publicKey");
+                        System.out.println("TD已经接收到秘钥交换请求");
+                        //将Str转换成PublicKey
+                        OtherPubKey =(ECPublicKey)strToPublicKey(keyStr);
+
+                        //然后需要将自己的publicKey传给Client
+                        JSONObject JSON_ACK_KeyExchange=new JSONObject();
+                        JSON_ACK_KeyExchange.put("tag", "ACK_KeyExchange");
+                        JSON_ACK_KeyExchange.put("publicKey", GetPublicKeyStr(MyPubKey));
+                        //将JSON发给client
+                        bufferedWriter.write(JSON_ACK_KeyExchange.toString()+"END");
+                        bufferedWriter.flush();
+                    }
+
+
+
+
                     if(tag.equals("Request_AuthenticationStart")){
                         //要接受从客户端发过来的Mac和serial的值
                         mac = FromClient.getString("mac");
