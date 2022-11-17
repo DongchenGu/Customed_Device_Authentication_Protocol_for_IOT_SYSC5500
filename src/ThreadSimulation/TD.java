@@ -3,7 +3,11 @@ package ThreadSimulation;
 import Decoder.BASE64Decoder;
 import KeyedHash.KeyedHashGenerator;
 import ECC2.ECCencrypt;
+
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+
+import jdk.swing.interop.SwingInterOpUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -72,7 +76,7 @@ public class TD {
             ECPublicKey MyPubKey = null;
             ECPrivateKey MyPriKey = null;
             //用来接收对方传来的公钥
-            ECPublicKey OtherPubKey = null;
+            String OtherPubKey = null;
 
             ECCencrypt ECCModule = new ECCencrypt();
 
@@ -122,6 +126,7 @@ public class TD {
                     String receive = builder.toString();
                     //将收到的字符串中的结束符号去掉，
                     receive = receive.substring(0,receive.length() - 3);
+
                     JSONObject FromClient = null;
                     String plainText = null;
                     //判断string是否是加密后的
@@ -137,7 +142,7 @@ public class TD {
 //                        byte[] test  =ECCModule.encrypt("fsdfsdfsdf".getBytes(),MyPubKey);
 //                        plainText = new String(ECCModule.decrypt(test,MyPriKey));
 
-                        plainText = new String(ECCModule.decrypt(receive.getBytes(),MyPriKey));
+                        plainText = new String(ECCModule.decrypt(receive.getBytes("ISO-8859-1"),GetPrivateKeyStr(MyPriKey)),"ISO-8859-1");
                         System.out.println(plainText);
                         FromClient = new JSONObject(plainText);
                     }
@@ -150,9 +155,9 @@ public class TD {
                     if(tag.equals("Request_KeyExchange")){
                        String keyStr = FromClient.getString("publicKey");
                         System.out.println("TD已经接收到秘钥交换请求");
-                        //将Str转换成PublicKey
-                        OtherPubKey =(ECPublicKey)strToPublicKey(keyStr);
-                        System.out.println(OtherPubKey.toString());
+                        //将Str
+                        OtherPubKey =keyStr;
+
 
                         //然后需要将自己的publicKey传给Client
                         JSONObject JSON_ACK_KeyExchange=new JSONObject();
@@ -162,6 +167,7 @@ public class TD {
                         bufferedWriter.write(JSON_ACK_KeyExchange.toString()+"END");
                         bufferedWriter.flush();
                         System.out.println("ACK_for_KeyExchange_SentOut");
+                        System.out.println(GetPublicKeyStr(MyPubKey));
                         continue;
                     }
 
@@ -174,18 +180,19 @@ public class TD {
                         //生成时间戳,并转换成字符串
                         long currentTime = System.currentTimeMillis();
                         time = Long.toString(currentTime);
-
+                        System.out.println("已经生成时间戳:"+ time);
 
                         //生成TDH3的KeyedHash,并存下来留着后边比较用
                         keyedHashTDH3 = new KeyedHashGenerator().keyedHash(mac,serial,time,key);
+                        System.out.println("TDH3已经生成："+keyedHashTDH3);
                         //然后需要时间戳发送给客户
                         JSONObject JSON_time=new JSONObject();
                         JSON_time.put("tag", "ACK_mac&serial_timeProvided");
                         JSON_time.put("time", time);
 
                         //使用Client的publicKey进行加密
-                        byte[] cipherText = ECCModule.encrypt(JSON_time.toString().getBytes(),OtherPubKey);
-                        String cipherTextStr = cipherText.toString();
+                        byte[] cipherText = ECCModule.encrypt(JSON_time.toString().getBytes("ISO-8859-1"),OtherPubKey);
+                        String cipherTextStr = new String(cipherText,"ISO-8859-1");
                         //将JSON发给client
                         bufferedWriter.write(cipherTextStr+"END");
                         bufferedWriter.flush();
@@ -208,9 +215,9 @@ public class TD {
                             JSON_result.put("tag", "ACK_OK");
 
                             //加密
-                            byte[] cipherTest = ECCModule.encrypt(JSON_result.toString().getBytes(),OtherPubKey);
+                            byte[] cipherTest = ECCModule.encrypt(JSON_result.toString().getBytes("ISO-8859-1"),OtherPubKey);
                             //发回客户端
-                            bufferedWriter.write(new String(cipherTest)+"END");
+                            bufferedWriter.write(new String(cipherTest,"ISO-8859-1")+"END");
                             bufferedWriter.flush();
                             bufferedWriter.close();
                             bufferedReader.close();
@@ -220,8 +227,8 @@ public class TD {
                             JSONObject JSON_result=new JSONObject();
                             JSON_result.put("tag", "ACK_NOT_MATCH");
                             //加密
-                            byte[] cipherTest = ECCModule.encrypt(JSON_result.toString().getBytes(),OtherPubKey);
-                            bufferedWriter.write(new String(cipherTest)+"END");
+                            byte[] cipherTest = ECCModule.encrypt(JSON_result.toString().getBytes("ISO-8859-1"),OtherPubKey);
+                            bufferedWriter.write(new String(cipherTest,"ISO-8859-1")+"END");
                             bufferedWriter.flush();
                             bufferedWriter.close();
                             bufferedReader.close();

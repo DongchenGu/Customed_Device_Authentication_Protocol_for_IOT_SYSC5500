@@ -1,12 +1,13 @@
 package ECC2;
 
 import javax.crypto.Cipher;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.SecureRandom;
-import java.security.Security;
+import java.nio.charset.StandardCharsets;
+import java.security.*;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Base64;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 public class ECCencrypt {
@@ -24,10 +25,12 @@ public class ECCencrypt {
 //            ECPublicKey pubKey = (ECPublicKey) keyPair.getPublic();
 //            ECPrivateKey priKey = (ECPrivateKey) keyPair.getPrivate();
 //
-//            String content = "abc";
+//            String content = "abcjhbhj";
 //
-//            byte[] cipherTxt = encrypt(content.getBytes(), pubKey);
-//            byte[] clearTxt = decrypt(cipherTxt, priKey);
+//            byte[] cipherTxt = encrypt(content.getBytes("ISO-8859-1"), Base64.getEncoder().encodeToString(pubKey.getEncoded()));
+//            String string = new String(cipherTxt, "ISO-8859-1");
+//
+//            byte[] clearTxt = decrypt(string.getBytes("ISO-8859-1"), Base64.getEncoder().encodeToString(priKey.getEncoded()));
 //            System.out.println("content:" + content);
 //            System.out.println(cipherTxt.toString());
 //            System.out.println("cipherTxt["+cipherTxt.length+"]:" + new String(cipherTxt));
@@ -61,15 +64,23 @@ public class ECCencrypt {
         return Base64.getEncoder().encodeToString(bytes);
     }
 
-    public  byte[] encrypt(byte[] content, ECPublicKey pubKey) throws Exception {
+    public  byte[] encrypt(byte[] content, String publicKeyText) throws Exception {
+
+        X509EncodedKeySpec x509EncodedKeySpec2 = new X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyText));
+        KeyFactory keyFactory = KeyFactory.getInstance("EC");
+        PublicKey publicKey = keyFactory.generatePublic(x509EncodedKeySpec2);
         Cipher cipher = Cipher.getInstance("ECIES", "BC");
-        cipher.init(Cipher.ENCRYPT_MODE, pubKey);
-        return cipher.doFinal(content);
+        cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+        return  cipher.doFinal(content);
+
     }
 
-    public  byte[] decrypt(byte[] content, ECPrivateKey priKey) throws Exception {
+    public  byte[] decrypt(byte[] content, String privateKeyText) throws Exception {
+        PKCS8EncodedKeySpec pkcs8EncodedKeySpec5 = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(privateKeyText));
+        KeyFactory keyFactory = KeyFactory.getInstance("EC");
+        PrivateKey privateKey = keyFactory.generatePrivate(pkcs8EncodedKeySpec5);
         Cipher cipher = Cipher.getInstance("ECIES", "BC");
-        cipher.init(Cipher.DECRYPT_MODE, priKey);
+        cipher.init(Cipher.DECRYPT_MODE, privateKey);
         return cipher.doFinal(content);
     }
 }

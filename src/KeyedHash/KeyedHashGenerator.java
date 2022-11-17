@@ -172,8 +172,8 @@ public class KeyedHashGenerator {
 
         //拿得到的加密结果做MD5得到最终的DH3
         DH3 = computeMD5(preDH);
-        String DH3str = new String(DH3);
-        System.out.println(DH3str);
+        String DH3str = new String(DH3,"ISO-8859-1");
+//        System.out.println(DH3str);
         return DH3str;
     }
 

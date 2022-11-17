@@ -5,6 +5,7 @@ import com.sun.tools.jconsole.JConsoleContext;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.X509EncodedKeySpec;
@@ -78,8 +79,8 @@ public class Client {
         String keyedHash;
         ECPublicKey MyPubKey = null;
         ECPrivateKey MyPriKey = null;
-        //用来接收对方传来的公钥
-        ECPublicKey OtherPubKey = null;
+        //用来保存TD的公钥，这个公钥值是ECPublicKey key导出byte数组，然后再通过base64编码后得到的
+        String OtherPubKey = null;
         ECCencrypt ECCModule = new ECCencrypt();
 
         try {
@@ -110,8 +111,8 @@ public class Client {
             Map<String,String> KeyRequest = new HashMap<>();
             JSONObject JSONKeyRequest=new JSONObject();
             JSONKeyRequest.put("tag", "Request_KeyExchange");
-            System.out.println("客户端的公钥");
-            System.out.println(MyPubKey.toString());
+//            System.out.println("客户端的公钥");
+//            System.out.println(MyPubKey.hashCode());
             //把公钥转换成str发送出去
             String publicKeyStr = GetPublicKeyStr(MyPubKey);
             JSONKeyRequest.put("publicKey",publicKeyStr);
@@ -150,8 +151,8 @@ public class Client {
                 catch (JSONException e) {
                     //这里需要解密
                     System.out.println("Client收到加密请求，正在解密message。。。");
-                    plainText = new String(ECCModule.decrypt(receive.getBytes(),MyPriKey));
-                    System.out.println(plainText);
+                    plainText = new String(ECCModule.decrypt(receive.getBytes("ISO-8859-1"),GetPrivateKeyStr(MyPriKey)));
+//                    System.out.println(plainText);
                     authenticationFromTD = new JSONObject(plainText);
                 }
                 //获得到TD回复中的tag标签
@@ -163,8 +164,9 @@ public class Client {
                 if(tag.equals("ACK_KeyExchange")){
                         String TDKeyStr = authenticationFromTD.getString("publicKey");
                         System.out.println("Client已经接收TD返回的publicKey");
-                        //将Str转换成PublicKey
-                        OtherPubKey =(ECPublicKey)strToPublicKey(TDKeyStr);
+
+                        //直接用base64编码后的公钥
+                        OtherPubKey =TDKeyStr;
                     //System.out.println(OtherPubKey.toString());
 
                         //秘钥交换流程结束，开始发送认证请求
@@ -175,9 +177,9 @@ public class Client {
                         JSONrequest.put("mac", mac);
                         JSONrequest.put("serial", serial);
                         //使用TD 的publicKey进行ECC加密
-                        byte[] cipherTxt =ECCModule.encrypt(JSONrequest.toString().getBytes(),OtherPubKey);
+                        byte[] cipherTxt =ECCModule.encrypt(JSONrequest.toString().getBytes("ISO-8859-1"),OtherPubKey);
                         //将JSON发给TD,手动加入结束符号，提供判断
-                        bufferedWriter.write(new String(cipherTxt)+"END");
+                        bufferedWriter.write(new String(cipherTxt,"ISO-8859-1")+"END");
                         bufferedWriter.flush();
                         System.out.println("Client已经发送认证请求");
                         continue;
@@ -189,15 +191,16 @@ public class Client {
                     if(time!=null){
                         //重新计算KeyedHash
                         keyedHash = new KeyedHashGenerator().keyedHash(mac,serial,time,key);
+                        System.out.println("DH3已经生成："+keyedHash);
                         //然后需要将计算出的keyedHash结果发给TD
                         JSONObject JSON_DH3_Back=new JSONObject();
                         JSON_DH3_Back.put("tag", "DH3");
                         JSON_DH3_Back.put("DH3", keyedHash);
                         //使用TD的publicKey加密
-                        byte[] cipherTxt =ECCModule.encrypt(JSON_DH3_Back.toString().getBytes(),OtherPubKey);
+                        byte[] cipherTxt =ECCModule.encrypt(JSON_DH3_Back.toString().getBytes("ISO-8859-1"),OtherPubKey);
 
                         //将JSON发给TD
-                        bufferedWriter.write(new String(cipherTxt)+"END");
+                        bufferedWriter.write(new String(cipherTxt,"ISO-8859-1")+"END");
                         bufferedWriter.flush();
                         System.out.println("Client已经发送DH3");
                     }else{
@@ -205,8 +208,8 @@ public class Client {
                         JSONObject ERR=new JSONObject();
                         ERR.put("tag", "ERR_finished");
                         //使用TD的publicKey加密
-                        byte[] cipherTxt =ECCModule.encrypt(ERR.toString().getBytes(),OtherPubKey);
-                        bufferedWriter.write(new String(cipherTxt)+"END");
+                        byte[] cipherTxt =ECCModule.encrypt(ERR.toString().getBytes("ISO-8859-1"),OtherPubKey);
+                        bufferedWriter.write(new String(cipherTxt,"ISO-8859-1")+"END");
                         bufferedWriter.flush();
                         bufferedWriter.close();
                         bufferedReader.close();
