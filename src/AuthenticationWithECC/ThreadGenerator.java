@@ -1,7 +1,4 @@
-package ThreadSimulation;
-
-import java.io.*;
-import java.net.Socket;
+package AuthenticationWithECC;
 
 public class ThreadGenerator {
 

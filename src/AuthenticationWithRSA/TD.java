@@ -1,13 +1,8 @@
-package ThreadSimulation;
+package AuthenticationWithRSA;
 
 import Decoder.BASE64Decoder;
-import KeyedHash.KeyedHashGenerator;
 import ECC2.ECCencrypt;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-
-import jdk.swing.interop.SwingInterOpUtils;
+import KeyedHash.KeyedHashGenerator;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -20,6 +15,7 @@ import java.security.interfaces.ECPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 public class TD {
     public static Base64.Decoder decoder = Base64.getDecoder();
@@ -50,22 +46,7 @@ public class TD {
 
         return publicKey;
     }
-    public static PrivateKey strToPrivateKey(String str){
-        PrivateKey privateKey = null;
-        try {
-            byte[] keyBytes = (new BASE64Decoder()).decodeBuffer(str);
-            PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(keyBytes);
-            KeyFactory keyFactory = KeyFactory.getInstance("EC");
-            privateKey = keyFactory.generatePrivate(pkcs8EncodedKeySpec);
-        } catch (InvalidKeySpecException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return privateKey;
-    }
+
 
     public static void AuthenticateDevice(String key, int port){
             Socket socket = null;

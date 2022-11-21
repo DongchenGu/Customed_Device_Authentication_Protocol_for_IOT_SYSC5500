@@ -1,11 +1,9 @@
-package ThreadSimulation;
+package AuthenticationWithECC;
 
 import Decoder.BASE64Decoder;
-import com.sun.tools.jconsole.JConsoleContext;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.X509EncodedKeySpec;
