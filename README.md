@@ -8,7 +8,6 @@
 
 
 # KeyedHash generation process  
-# Authentication process  
 <div align=center>
 <img src="https://user-images.githubusercontent.com/53630148/203813817-eb2686fb-e9c5-4616-9823-2a6cd2d3b43d.png">
 </div>  
