@@ -3,6 +3,7 @@ package AuthenticationWithRSA;
 import Decoder.BASE64Decoder;
 import ECC2.ECCencrypt;
 import KeyedHash.KeyedHashGenerator;
+import RSA.RSAencrypt;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -24,15 +25,7 @@ public class Client {
     public static Base64.Decoder decoder = Base64.getDecoder();
     public static Base64.Encoder encoder = Base64.getEncoder();
 
-    //将秘钥进行base64编码，然后再通过JSON传输
-    public static String GetPublicKeyStr(ECPublicKey key){
-        String KeyStr = new String(encoder.encodeToString(key.getEncoded()));
-        return KeyStr;
-    }
-    public static String GetPrivateKeyStr(ECPrivateKey key){
-        String KeyStr = new String(encoder.encodeToString(key.getEncoded()));
-        return KeyStr;
-    }
+
     //decode base64，拿到原来的类型
     public  static PublicKey strToPublicKey(String str) throws InvalidKeySpecException {
         PublicKey publicKey = null;
@@ -67,22 +60,21 @@ public class Client {
 
 
 
-    public static  void RequestAuthentication(String mac, String serial, String key,int  port){
+    public static  void RequestAuthentication(String mac, String serial, String key,int  port) throws NoSuchAlgorithmException {
         Socket socket = null;
         String time;
         String keyedHash;
-        ECPublicKey MyPubKey = null;
-        ECPrivateKey MyPriKey = null;
-        //用来保存TD的公钥，这个公钥值是ECPublicKey key导出byte数组，然后再通过base64编码后得到的
+        String MyPubKey = null;
+        String MyPriKey = null;
+
+        //用来保存TD的公钥，这个公钥值是RSAPublicKey key导出byte数组，然后再通过base64编码后得到的
         String OtherPubKey = null;
-        ECCencrypt ECCModule = new ECCencrypt();
+        RSAencrypt rsAencrypt = new RSAencrypt();
 
         try {
-            //先生成自己的秘钥对
-            ECCencrypt eCCencrypt = new ECCencrypt();
-            KeyPair keyPair =eCCencrypt.getKeyPair();
-            MyPubKey = (ECPublicKey) keyPair.getPublic();
-            MyPriKey = (ECPrivateKey) keyPair.getPrivate();
+            //获取到自己的秘钥对
+            MyPubKey = rsAencrypt.getPublicKeyString();
+            MyPriKey = rsAencrypt.getPrivateKeyString();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -105,11 +97,10 @@ public class Client {
             Map<String,String> KeyRequest = new HashMap<>();
             JSONObject JSONKeyRequest=new JSONObject();
             JSONKeyRequest.put("tag", "Request_KeyExchange");
-//            System.out.println("客户端的公钥");
-//            System.out.println(MyPubKey.hashCode());
+
+
             //把公钥转换成str发送出去
-            String publicKeyStr = GetPublicKeyStr(MyPubKey);
-            JSONKeyRequest.put("publicKey",publicKeyStr);
+            JSONKeyRequest.put("publicKey",MyPubKey);
             //将JSON发给TD,手动加入结束符号，提供判断
             bufferedWriter.write(JSONKeyRequest.toString()+"END");
             bufferedWriter.flush();
@@ -145,7 +136,7 @@ public class Client {
                 catch (JSONException e) {
                     //这里需要解密
                     System.out.println("Client收到加密请求，正在解密message。。。");
-                    plainText = new String(ECCModule.decrypt(receive.getBytes("ISO-8859-1"),GetPrivateKeyStr(MyPriKey)));
+                    plainText = rsAencrypt.decrypt(receive,MyPriKey);
 //                    System.out.println(plainText);
                     authenticationFromTD = new JSONObject(plainText);
                 }
@@ -158,10 +149,10 @@ public class Client {
                 if(tag.equals("ACK_KeyExchange")){
                         String TDKeyStr = authenticationFromTD.getString("publicKey");
                         System.out.println("Client已经接收TD返回的publicKey");
-
+                    System.out.println(TDKeyStr);
                         //直接用base64编码后的公钥
                         OtherPubKey =TDKeyStr;
-                    //System.out.println(OtherPubKey.toString());
+
 
                         //秘钥交换流程结束，开始发送认证请求
                         //客户端发起认证，需要将Mac和serial发给服务器端，
@@ -170,10 +161,10 @@ public class Client {
                         JSONrequest.put("tag", "Request_AuthenticationStart");
                         JSONrequest.put("mac", mac);
                         JSONrequest.put("serial", serial);
-                        //使用TD 的publicKey进行ECC加密
-                        byte[] cipherTxt =ECCModule.encrypt(JSONrequest.toString().getBytes("ISO-8859-1"),OtherPubKey);
+                        //使用TD 的publicKey进行RSA加密
+                        String cipherTxt =rsAencrypt.encrypt(JSONrequest.toString(),OtherPubKey);
                         //将JSON发给TD,手动加入结束符号，提供判断
-                        bufferedWriter.write(new String(cipherTxt,"ISO-8859-1")+"END");
+                        bufferedWriter.write(cipherTxt+"END");
                         bufferedWriter.flush();
                         System.out.println("Client已经发送认证请求");
                         continue;
@@ -191,10 +182,10 @@ public class Client {
                         JSON_DH3_Back.put("tag", "DH3");
                         JSON_DH3_Back.put("DH3", keyedHash);
                         //使用TD的publicKey加密
-                        byte[] cipherTxt =ECCModule.encrypt(JSON_DH3_Back.toString().getBytes("ISO-8859-1"),OtherPubKey);
+                        String cipherTxt =rsAencrypt.encrypt(JSON_DH3_Back.toString(),OtherPubKey);
 
                         //将JSON发给TD
-                        bufferedWriter.write(new String(cipherTxt,"ISO-8859-1")+"END");
+                        bufferedWriter.write(cipherTxt+"END");
                         bufferedWriter.flush();
                         System.out.println("Client已经发送DH3");
                     }else{
@@ -202,8 +193,8 @@ public class Client {
                         JSONObject ERR=new JSONObject();
                         ERR.put("tag", "ERR_finished");
                         //使用TD的publicKey加密
-                        byte[] cipherTxt =ECCModule.encrypt(ERR.toString().getBytes("ISO-8859-1"),OtherPubKey);
-                        bufferedWriter.write(new String(cipherTxt,"ISO-8859-1")+"END");
+                        String cipherTxt =rsAencrypt.encrypt(ERR.toString(),OtherPubKey);
+                        bufferedWriter.write(cipherTxt+"END");
                         bufferedWriter.flush();
                         bufferedWriter.close();
                         bufferedReader.close();
@@ -263,7 +254,7 @@ public class Client {
 
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws NoSuchAlgorithmException {
         int port =4510;
         String mac = "E446B00F80D7";
         String serial = "erjycrsd1343n";

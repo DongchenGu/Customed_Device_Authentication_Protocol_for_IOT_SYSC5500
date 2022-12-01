@@ -1,3 +1,5 @@
+package ECC2;
+
 import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;

@@ -19,35 +19,35 @@ import java.util.Map;
 public class RSAencrypt {
     public  java.util.Base64.Decoder decoder = java.util.Base64.getDecoder();
     public  java.util.Base64.Encoder encoder = Base64.getEncoder();
-    public  Map<String, String> RsaKeyPair = new HashMap<String,String>();
+    private  Map<String, String> RsaKeyPair = new HashMap<String,String>();
 
     public RSAencrypt() throws NoSuchAlgorithmException {
         generateKeyPair();
     }
 
-    public static void main(String[] args) throws Exception {
-        String text = "this is the plain text for the testing";
-        System.out.println(text);
-
-        RSAencrypt rsa = new RSAencrypt();
-        String publicKEY =rsa.getPublicKeyString();
-        String privateKEY = rsa.getPrivateKeyString();
-
-        String cipherText = rsa.encrypt(text,publicKEY);
-        System.out.println("加密信息如下");
-        System.out.println(cipherText);
-
-        String plainText =rsa.decrypt(cipherText,privateKEY);
-        System.out.println("解密后的信息如下");
-        System.out.println(plainText);
-
-    }
+//    public static void main(String[] args) throws Exception {
+//        String text = "this is the plain text for the testing";
+//        System.out.println(text);
+//
+//        RSAencrypt rsa = new RSAencrypt();
+//        String publicKEY =rsa.getPublicKeyString();
+//        String privateKEY = rsa.getPrivateKeyString();
+//
+//        String cipherText = rsa.encrypt(text,publicKEY);
+//        System.out.println("加密信息如下");
+//        System.out.println(cipherText);
+//
+//        String plainText =rsa.decrypt(cipherText,privateKEY);
+//        System.out.println("解密后的信息如下");
+//        System.out.println(plainText);
+//
+//    }
 
 
 
     public void generateKeyPair() throws NoSuchAlgorithmException {
          KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-         keyPairGenerator.initialize(512);
+         keyPairGenerator.initialize(1024);
          KeyPair keyPair = keyPairGenerator.generateKeyPair();
          RSAPublicKey rsaPublicKey = (RSAPublicKey) keyPair.getPublic();
          RSAPrivateKey rsaPrivateKey = (RSAPrivateKey) keyPair.getPrivate();

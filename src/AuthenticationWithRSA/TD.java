@@ -3,6 +3,7 @@ package AuthenticationWithRSA;
 import Decoder.BASE64Decoder;
 import ECC2.ECCencrypt;
 import KeyedHash.KeyedHashGenerator;
+import RSA.RSAencrypt;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -48,25 +49,25 @@ public class TD {
     }
 
 
-    public static void AuthenticateDevice(String key, int port){
+    public static void AuthenticateDevice(String key, int port) throws NoSuchAlgorithmException {
             Socket socket = null;
             String mac;
             String serial;
             String time;
             String keyedHashTDH3=null;
-            ECPublicKey MyPubKey = null;
-            ECPrivateKey MyPriKey = null;
+            String  MyPubKey = null;
+            String  MyPriKey = null;
             //用来接收对方传来的公钥
             String OtherPubKey = null;
 
-            ECCencrypt ECCModule = new ECCencrypt();
+            RSAencrypt rsAencrypt = new RSAencrypt();
 
             try {
                 //先生成自己的秘钥对
-                ECCencrypt eCCencrypt = new ECCencrypt();
-                KeyPair keyPair =eCCencrypt.getKeyPair();
-                MyPubKey = (ECPublicKey) keyPair.getPublic();
-                MyPriKey = (ECPrivateKey) keyPair.getPrivate();
+                MyPubKey = rsAencrypt.getPublicKeyString();
+                MyPriKey = rsAencrypt.getPrivateKeyString();
+                System.out.println("TD: publicKey");
+                System.out.println(MyPubKey);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -123,8 +124,8 @@ public class TD {
 //                        byte[] test  =ECCModule.encrypt("fsdfsdfsdf".getBytes(),MyPubKey);
 //                        plainText = new String(ECCModule.decrypt(test,MyPriKey));
 
-                        plainText = new String(ECCModule.decrypt(receive.getBytes("ISO-8859-1"),GetPrivateKeyStr(MyPriKey)),"ISO-8859-1");
-                        System.out.println(plainText);
+                        plainText = rsAencrypt.decrypt(receive,MyPriKey);
+                        //System.out.println(plainText);
                         FromClient = new JSONObject(plainText);
                     }
                     //获得到认证请求中的tag标签
@@ -143,12 +144,12 @@ public class TD {
                         //然后需要将自己的publicKey传给Client
                         JSONObject JSON_ACK_KeyExchange=new JSONObject();
                         JSON_ACK_KeyExchange.put("tag", "ACK_KeyExchange");
-                        JSON_ACK_KeyExchange.put("publicKey", GetPublicKeyStr(MyPubKey));
+                        JSON_ACK_KeyExchange.put("publicKey", MyPubKey);
                         //将JSON发给client
                         bufferedWriter.write(JSON_ACK_KeyExchange.toString()+"END");
                         bufferedWriter.flush();
                         System.out.println("ACK_for_KeyExchange_SentOut");
-                        System.out.println(GetPublicKeyStr(MyPubKey));
+                        //System.out.println(GetPublicKeyStr(MyPubKey));
                         continue;
                     }
 
@@ -172,10 +173,10 @@ public class TD {
                         JSON_time.put("time", time);
 
                         //使用Client的publicKey进行加密
-                        byte[] cipherText = ECCModule.encrypt(JSON_time.toString().getBytes("ISO-8859-1"),OtherPubKey);
-                        String cipherTextStr = new String(cipherText,"ISO-8859-1");
+                        String cipherText = rsAencrypt.encrypt(JSON_time.toString(),OtherPubKey);
+
                         //将JSON发给client
-                        bufferedWriter.write(cipherTextStr+"END");
+                        bufferedWriter.write(cipherText+"END");
                         bufferedWriter.flush();
                         System.out.println("ACK_TimeStamp_SentOut");
 
@@ -196,9 +197,9 @@ public class TD {
                             JSON_result.put("tag", "ACK_OK");
 
                             //加密
-                            byte[] cipherTest = ECCModule.encrypt(JSON_result.toString().getBytes("ISO-8859-1"),OtherPubKey);
+                            String cipherTest = rsAencrypt.encrypt(JSON_result.toString(),OtherPubKey);
                             //发回客户端
-                            bufferedWriter.write(new String(cipherTest,"ISO-8859-1")+"END");
+                            bufferedWriter.write(cipherTest+"END");
                             bufferedWriter.flush();
                             bufferedWriter.close();
                             bufferedReader.close();
@@ -208,8 +209,8 @@ public class TD {
                             JSONObject JSON_result=new JSONObject();
                             JSON_result.put("tag", "ACK_NOT_MATCH");
                             //加密
-                            byte[] cipherTest = ECCModule.encrypt(JSON_result.toString().getBytes("ISO-8859-1"),OtherPubKey);
-                            bufferedWriter.write(new String(cipherTest,"ISO-8859-1")+"END");
+                            String cipherTest = rsAencrypt.encrypt(JSON_result.toString(),OtherPubKey);
+                            bufferedWriter.write(cipherTest+"END");
                             bufferedWriter.flush();
                             bufferedWriter.close();
                             bufferedReader.close();
@@ -229,7 +230,7 @@ public class TD {
 
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws NoSuchAlgorithmException {
         String key = "urefbsdbfweufwet"; //一个英文字符占一个字节，必须有16个字节
         int port =4510;
         AuthenticateDevice(key,port);
