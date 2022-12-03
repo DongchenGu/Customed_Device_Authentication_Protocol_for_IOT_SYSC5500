@@ -90,7 +90,7 @@ public class TD {
             try{
                 ServerSocket server = new ServerSocket(port);
                 socket = server.accept();
-                
+
                 //由Socket对象得到输出流
                 BufferedWriter bufferedWriter=new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(),"UTF-8"));
                 //由Socket对象得到输入流，并构造对应的BufferedReader对象
@@ -129,17 +129,17 @@ public class TD {
                     try{
                         //不能获取的话说说明就是加密后的
                         FromClient = new JSONObject(receive);
-                        System.out.println("message没有加密");
+                        System.out.println("TD: receive new packet, message not encrypted.");
                     }
                     catch (JSONException e) {
                         //这里需要解密
-                        System.out.println("TD收到加密请求，正在解密message。。。");
+                        System.out.println("TD(ECC encrypted): receive ECCencrypted message，decrypt.....");
 //                        //这里开始测试
 //                        byte[] test  =ECCModule.encrypt("fsdfsdfsdf".getBytes(),MyPubKey);
 //                        plainText = new String(ECCModule.decrypt(test,MyPriKey));
 
                         plainText = new String(ECCModule.decrypt(receive.getBytes("ISO-8859-1"),GetPrivateKeyStr(MyPriKey)),"ISO-8859-1");
-                        System.out.println(plainText);
+                        //System.out.println(plainText);
                         FromClient = new JSONObject(plainText);
                     }
                     //获得到认证请求中的tag标签
@@ -150,7 +150,7 @@ public class TD {
                     //接收到秘钥交换请求
                     if(tag.equals("Request_KeyExchange")){
                        String keyStr = FromClient.getString("publicKey");
-                        System.out.println("TD已经接收到秘钥交换请求");
+                        System.out.println("TD: KeyExchange Request received");
                         //将Str
                         OtherPubKey =keyStr;
 
@@ -162,13 +162,13 @@ public class TD {
                         //将JSON发给client
                         bufferedWriter.write(JSON_ACK_KeyExchange.toString()+"END");
                         bufferedWriter.flush();
-                        System.out.println("ACK_for_KeyExchange_SentOut");
-                        System.out.println(GetPublicKeyStr(MyPubKey));
+                        System.out.println("TD: ACK_for_KeyExchange_SentOut");
+                        //System.out.println(GetPublicKeyStr(MyPubKey));
                         continue;
                     }
 
                     if(tag.equals("Request_AuthenticationStart")){
-                        System.out.println("TD收到Client认证请求");
+                        System.out.println("TD(ECC encrypted):  Authentication Request received");
                         //要接受从客户端发过来的Mac和serial的值
                         mac = FromClient.getString("mac");
                         serial = FromClient.getString("serial");
@@ -176,11 +176,11 @@ public class TD {
                         //生成时间戳,并转换成字符串
                         long currentTime = System.currentTimeMillis();
                         time = Long.toString(currentTime);
-                        System.out.println("已经生成时间戳:"+ time);
+                        System.out.println("TD(ECC encrypted): TimeStamp generated:"+ time);
 
                         //生成TDH3的KeyedHash,并存下来留着后边比较用
                         keyedHashTDH3 = new KeyedHashGenerator().keyedHash(mac,serial,time,key);
-                        System.out.println("TDH3已经生成："+keyedHashTDH3);
+                        System.out.println("TD(ECC encrypted): TDH3 generated："+keyedHashTDH3);
                         //然后需要时间戳发送给客户
                         JSONObject JSON_time=new JSONObject();
                         JSON_time.put("tag", "ACK_mac&serial_timeProvided");
@@ -192,21 +192,21 @@ public class TD {
                         //将JSON发给client
                         bufferedWriter.write(cipherTextStr+"END");
                         bufferedWriter.flush();
-                        System.out.println("ACK_TimeStamp_SentOut");
+                        System.out.println("TD(ECC encrypted): ACK_TimeStamp_SentOut");
 
                     }else if(tag.equals("ERR_finished")){
-                        System.out.println("TDH: Err! Request for the authentication is stopped");
+                        System.out.println("TDH(ECC encrypted): Err! Request for the authentication is stopped");
                         bufferedWriter.close();
                         bufferedReader.close();
                         break;
                     }else if(tag.equals("DH3")){
-                        System.out.println("TD收到Client发来的DH3");
+                        System.out.println("TD(ECC encrypted): Client-DH3 received");
                         //接收客户端发来的DH3的KeyedHash
                         String DH3 = FromClient.getString("DH3");
                         //判断和自己先前计算的值是否相等
                         if(DH3.equals(keyedHashTDH3)){
                             //认证成功，将ok返回给client
-                            System.out.println("TDH:authentication pass!");
+                            System.out.println("TD(ECC encrypted): Authentication pass!");
                             JSONObject JSON_result=new JSONObject();
                             JSON_result.put("tag", "ACK_OK");
 

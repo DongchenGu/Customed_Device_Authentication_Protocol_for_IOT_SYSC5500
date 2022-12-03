@@ -46,9 +46,14 @@ public class ECCencrypt {
 
 
     public  KeyPair getKeyPair() throws Exception {
-        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC", "BC");//BouncyCastle
-        keyPairGenerator.initialize(KEY_SIZE, new SecureRandom());
-        KeyPair keyPair = keyPairGenerator.generateKeyPair();
+        //调用封装好的字典，通过字典来获取
+        KeyDistribution keyDistribution = new KeyDistribution();
+
+        KeyPair keyPair = keyDistribution.GetKeyPairFromDictionary();
+
+//        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC", "BC");//BouncyCastle
+//        keyPairGenerator.initialize(KEY_SIZE, new SecureRandom());
+//        KeyPair keyPair = keyPairGenerator.generateKeyPair();
         return keyPair;
     }
 

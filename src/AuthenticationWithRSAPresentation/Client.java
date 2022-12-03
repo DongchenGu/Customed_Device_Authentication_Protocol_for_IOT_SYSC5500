@@ -131,11 +131,11 @@ public class Client {
                 try{
                     //不能获取的话说说明就是加密后的
                     authenticationFromTD = new JSONObject(receive);
-                    System.out.println("receive new package, message is not encrypted");
+                    System.out.println("Client: receive new package, message is not encrypted");
                 }
                 catch (JSONException e) {
                     //这里需要解密
-                    System.out.println("Client received the encrypted request，decrypt....");
+                    System.out.println("Client(RSA encrypted): received the encrypted request，decrypt....");
                     plainText = rsAencrypt.decrypt(receive,MyPriKey);
 //                    System.out.println(plainText);
                     authenticationFromTD = new JSONObject(plainText);
@@ -149,7 +149,7 @@ public class Client {
                 if(tag.equals("ACK_KeyExchange")){
                         String TDKeyStr = authenticationFromTD.getString("publicKey");
                         System.out.println("Client： publicKey of TD received");
-                    System.out.println(TDKeyStr);
+                    //System.out.println(TDKeyStr);
                         //直接用base64编码后的公钥
                         OtherPubKey =TDKeyStr;
 
@@ -166,17 +166,17 @@ public class Client {
                         //将JSON发给TD,手动加入结束符号，提供判断
                         bufferedWriter.write(cipherTxt+"END");
                         bufferedWriter.flush();
-                        System.out.println("Client: Authentication request sent out");
+                        System.out.println("Client(RSA encrypted): Authentication request sent out");
                         continue;
                 }
                 if(tag.equals("ACK_mac&serial_timeProvided")){
                     //要接受从TD传过来的time值
                     time = authenticationFromTD.getString("time");
-                    System.out.println("Client: TimeStamp received "+time);
+                    System.out.println("Client(RSA encrypted): TimeStamp received "+time);
                     if(time!=null){
                         //重新计算KeyedHash
                         keyedHash = new KeyedHashGenerator().keyedHash(mac,serial,time,key);
-                        System.out.println("Client: DH3 generated："+keyedHash);
+                        System.out.println("Client(RSA encrypted): DH3 generated："+keyedHash);
                         //然后需要将计算出的keyedHash结果发给TD
                         JSONObject JSON_DH3_Back=new JSONObject();
                         JSON_DH3_Back.put("tag", "DH3");
@@ -187,9 +187,9 @@ public class Client {
                         //将JSON发给TD
                         bufferedWriter.write(cipherTxt+"END");
                         bufferedWriter.flush();
-                        System.out.println("Client: DH3 sent out");
+                        System.out.println("Client(RSA encrypted): DH3 sent out");
                     }else{
-                        System.out.println("ClientNode: error! not a valid timestamp");
+                        System.out.println("Client(RSA encrypted): error! not a valid timestamp");
                         JSONObject ERR=new JSONObject();
                         ERR.put("tag", "ERR_finished");
                         //使用TD的publicKey加密
@@ -201,18 +201,18 @@ public class Client {
                         break;
                     }
                 }else if(tag.equals("ERR_finished")){
-                    System.out.println("ClientNode: Err! Server refuses to respond");
+                    System.out.println("Client(RSA encrypted): Err! Server refuses to respond");
                     bufferedWriter.close();
                     bufferedReader.close();
                     break;
                 }else if(tag.equals("ACK_OK")){
-                    System.out.println("Client：feedback received");
-                    System.out.println("ClientNode: authentication pass!");
+                    System.out.println("Client(RSA encrypted)：feedback received");
+                    System.out.println("Client(RSA encrypted): authentication pass!");
                     bufferedWriter.close();
                     bufferedReader.close();
                     break;
                 }else if(tag.equals("ACK_NOT_MATCH")){
-                    System.out.println("ClientNode: authentication fail!");
+                    System.out.println("Client(RSA encrypted): authentication fail!");
                     bufferedWriter.close();
                     bufferedReader.close();
                     break;

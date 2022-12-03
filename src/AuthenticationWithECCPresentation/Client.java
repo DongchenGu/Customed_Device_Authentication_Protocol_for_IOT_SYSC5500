@@ -113,7 +113,7 @@ public class Client {
             //将JSON发给TD,手动加入结束符号，提供判断
             bufferedWriter.write(JSONKeyRequest.toString()+"END");
             bufferedWriter.flush();
-            System.out.println("client发送秘钥交换请求");
+            System.out.println("Client: KeyExchange Request sent out!");
 
 
             //循环接收内容
@@ -140,11 +140,11 @@ public class Client {
                 try{
                     //不能获取的话说说明就是加密后的
                     authenticationFromTD = new JSONObject(receive);
-                    System.out.println("message没有加密");
+                    System.out.println("Client: receive new packet, message not encrypted");
                 }
                 catch (JSONException e) {
                     //这里需要解密
-                    System.out.println("Client收到加密请求，正在解密message。。。");
+                    System.out.println("Client(ECC encrypted): receive ECC encrypted message，decrypt.....");
                     plainText = new String(ECCModule.decrypt(receive.getBytes("ISO-8859-1"),GetPrivateKeyStr(MyPriKey)));
 //                    System.out.println(plainText);
                     authenticationFromTD = new JSONObject(plainText);
@@ -157,7 +157,7 @@ public class Client {
                 //分情况讨论，如果收到的是不是结束就继续进行认证过程
                 if(tag.equals("ACK_KeyExchange")){
                         String TDKeyStr = authenticationFromTD.getString("publicKey");
-                        System.out.println("Client已经接收TD返回的publicKey");
+                        System.out.println("Client: TD-publicKey received");
 
                         //直接用base64编码后的公钥
                         OtherPubKey =TDKeyStr;
@@ -175,17 +175,17 @@ public class Client {
                         //将JSON发给TD,手动加入结束符号，提供判断
                         bufferedWriter.write(new String(cipherTxt,"ISO-8859-1")+"END");
                         bufferedWriter.flush();
-                        System.out.println("Client已经发送认证请求");
+                        System.out.println("Client(ECC encrypted): Authentication Request sent out");
                         continue;
                 }
                 if(tag.equals("ACK_mac&serial_timeProvided")){
                     //要接受从TD传过来的time值
                     time = authenticationFromTD.getString("time");
-                    System.out.println("Client已经或得到time值"+time);
+                    System.out.println("Client(ECC encrypted): TimeStamp received "+time);
                     if(time!=null){
                         //重新计算KeyedHash
                         keyedHash = new KeyedHashGenerator().keyedHash(mac,serial,time,key);
-                        System.out.println("DH3已经生成："+keyedHash);
+                        System.out.println("Client(ECC encrypted): DH3 generated："+keyedHash);
                         //然后需要将计算出的keyedHash结果发给TD
                         JSONObject JSON_DH3_Back=new JSONObject();
                         JSON_DH3_Back.put("tag", "DH3");
@@ -196,9 +196,9 @@ public class Client {
                         //将JSON发给TD
                         bufferedWriter.write(new String(cipherTxt,"ISO-8859-1")+"END");
                         bufferedWriter.flush();
-                        System.out.println("Client已经发送DH3");
+                        System.out.println("Client(ECC encrypted): DH3 sent out");
                     }else{
-                        System.out.println("ClientNode: error! not a valid timestamp");
+                        System.out.println("Client(ECC encrypted): error! not a valid timestamp");
                         JSONObject ERR=new JSONObject();
                         ERR.put("tag", "ERR_finished");
                         //使用TD的publicKey加密
@@ -210,18 +210,18 @@ public class Client {
                         break;
                     }
                 }else if(tag.equals("ERR_finished")){
-                    System.out.println("ClientNode: Err! Server refuses to respond");
+                    System.out.println("Client(ECC encrypted): Err! Server refuses to respond");
                     bufferedWriter.close();
                     bufferedReader.close();
                     break;
                 }else if(tag.equals("ACK_OK")){
-                    System.out.println("Client：已经收到反馈");
-                    System.out.println("ClientNode: authentication pass!");
+                    System.out.println("Client(ECC encrypted)：receive feedback");
+                    System.out.println("Client(ECC encrypted): authentication pass!");
                     bufferedWriter.close();
                     bufferedReader.close();
                     break;
                 }else if(tag.equals("ACK_NOT_MATCH")){
-                    System.out.println("ClientNode: authentication fail!");
+                    System.out.println("Client(ECC encrypted): authentication fail!");
                     bufferedWriter.close();
                     bufferedReader.close();
                     break;

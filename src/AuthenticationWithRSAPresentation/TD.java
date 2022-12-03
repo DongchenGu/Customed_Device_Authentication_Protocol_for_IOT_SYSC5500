@@ -68,8 +68,8 @@ public class TD {
                 //先生成自己的秘钥对
                 MyPubKey = rsAencrypt.getPublicKeyString();
                 MyPriKey = rsAencrypt.getPrivateKeyString();
-                System.out.println("TD: publicKey");
-                System.out.println(MyPubKey);
+//                System.out.println("TD: publicKey");
+//                System.out.println(MyPubKey);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -121,7 +121,7 @@ public class TD {
                     }
                     catch (JSONException e) {
                         //这里需要解密
-                        System.out.println("TD: receive encrypted request，decrypt....");
+                        System.out.println("TD(RSA encrypted): receive encrypted request，decrypt....");
 //                        //这里开始测试
 //                        byte[] test  =ECCModule.encrypt("fsdfsdfsdf".getBytes(),MyPubKey);
 //                        plainText = new String(ECCModule.decrypt(test,MyPriKey));
@@ -156,7 +156,7 @@ public class TD {
                     }
 
                     if(tag.equals("Request_AuthenticationStart")){
-                        System.out.println("TD: Authentication Request received");
+                        System.out.println("TD(RSA encrypted): Authentication Request received");
                         //要接受从客户端发过来的Mac和serial的值
                         mac = FromClient.getString("mac");
                         serial = FromClient.getString("serial");
@@ -164,11 +164,11 @@ public class TD {
                         //生成时间戳,并转换成字符串
                         long currentTime = System.currentTimeMillis();
                         time = Long.toString(currentTime);
-                        System.out.println("TD: TimeStamp generated:"+ time);
+                        System.out.println("TD(RSA encrypted): TimeStamp generated:"+ time);
 
                         //生成TDH3的KeyedHash,并存下来留着后边比较用
                         keyedHashTDH3 = new KeyedHashGenerator().keyedHash(mac,serial,time,key);
-                        System.out.println("TD: TDH3 generated："+keyedHashTDH3);
+                        System.out.println("TD(RSA encrypted): TDH3 generated："+keyedHashTDH3);
                         //然后需要时间戳发送给客户
                         JSONObject JSON_time=new JSONObject();
                         JSON_time.put("tag", "ACK_mac&serial_timeProvided");
@@ -180,21 +180,21 @@ public class TD {
                         //将JSON发给client
                         bufferedWriter.write(cipherText+"END");
                         bufferedWriter.flush();
-                        System.out.println("TD: ACK_TimeStamp_SentOut");
+                        System.out.println("TD(RSA encrypted): ACK_TimeStamp_SentOut");
 
                     }else if(tag.equals("ERR_finished")){
-                        System.out.println("TDH: Err! Request for the authentication is stopped");
+                        System.out.println("TD(RSA encrypted): Err! Request for the authentication is stopped");
                         bufferedWriter.close();
                         bufferedReader.close();
                         break;
                     }else if(tag.equals("DH3")){
-                        System.out.println("TD: Client-DH3 received");
+                        System.out.println("TD(RSA encrypted): Client-DH3 received");
                         //接收客户端发来的DH3的KeyedHash
                         String DH3 = FromClient.getString("DH3");
                         //判断和自己先前计算的值是否相等
                         if(DH3.equals(keyedHashTDH3)){
                             //认证成功，将ok返回给client
-                            System.out.println("TD: TDH-authentication pass!");
+                            System.out.println("TD(RSA encrypted): TDH-authentication pass!");
                             JSONObject JSON_result=new JSONObject();
                             JSON_result.put("tag", "ACK_OK");
 
