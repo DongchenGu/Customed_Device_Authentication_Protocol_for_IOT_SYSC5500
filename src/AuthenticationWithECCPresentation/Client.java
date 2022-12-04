@@ -268,6 +268,10 @@ public class Client {
         String mac = "E446B00F80D7";
         String serial = "erjycrsd1343n";
         String key = "urefbsdbfweufwet"; //一个英文字符占一个字节，必须有16个字节
+
+        long startTime=System.currentTimeMillis();
         RequestAuthentication(mac,serial,key,port);
+        long endTime=System.currentTimeMillis(); //获取结束时间
+        System.out.println("Clinet time consumption： "+(endTime - startTime)+"ms");
     }
 }

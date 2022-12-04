@@ -235,6 +235,9 @@ public class TD {
     public static void main(String[] args) throws NoSuchAlgorithmException {
         String key = "urefbsdbfweufwet"; //一个英文字符占一个字节，必须有16个字节
         int port =4510;
+        long startTime=System.currentTimeMillis();
         AuthenticateDevice(key,port);
+        long endTime=System.currentTimeMillis(); //获取结束时间
+        System.out.println("Target device time consumption： "+(endTime - startTime)+"ms");
     }
 }
