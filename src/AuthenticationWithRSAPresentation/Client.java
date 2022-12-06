@@ -15,10 +15,12 @@ import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.Date;
 
 //client最先发起认证请求，TD用来验证
 public class Client {
@@ -260,9 +262,17 @@ public class Client {
         String serial = "erjycrsd1343n";
         String key = "urefbsdbfweufwet"; //一个英文字符占一个字节，必须有16个字节
 
+        Date date = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        String time = sdf.format(date);
+        System.out.println("Client device start time： "+ time);
+
         long startTime=System.currentTimeMillis();
         RequestAuthentication(mac,serial,key,port);
         long endTime=System.currentTimeMillis(); //获取结束时间
-        System.out.println("Clinet time consumption： "+(endTime - startTime)+"ms");
+
+        time = sdf.format(date);
+        System.out.println("Clinet time consumption： "+ (endTime - startTime) +"ms");
+        System.out.println("Client device end time： "+ time);
     }
 }

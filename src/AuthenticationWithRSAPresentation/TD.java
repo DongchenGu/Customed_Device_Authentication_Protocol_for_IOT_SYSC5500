@@ -18,7 +18,13 @@ import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.text.SimpleDateFormat;
 import java.util.Base64;
+
+import java.util.Date;
+import java.util.Calendar;
+
+
 
 public class TD {
     public static Base64.Decoder decoder = Base64.getDecoder();
@@ -235,9 +241,18 @@ public class TD {
     public static void main(String[] args) throws NoSuchAlgorithmException {
         String key = "urefbsdbfweufwet"; //一个英文字符占一个字节，必须有16个字节
         int port =4510;
+
+        Date date = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+        String time = sdf.format(date);
+        System.out.println("Target device start time： "+ time);
+
         long startTime=System.currentTimeMillis();
         AuthenticateDevice(key,port);
         long endTime=System.currentTimeMillis(); //获取结束时间
-        System.out.println("Target device time consumption： "+(endTime - startTime)+"ms");
+
+        time = sdf.format(date);
+        System.out.println("Target device time consumption： "+ (endTime - startTime) +"ms");
+        System.out.println("Target device end time： "+ time);
     }
 }
